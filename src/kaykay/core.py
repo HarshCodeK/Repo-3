@@ -38,6 +38,7 @@ class Gateway:
                 raise RuntimeError("budget_exceeded")
             self.reserved += reservation
 
+        committed = False
         try:
             errors = []
             for name, call in self.providers.items():
@@ -47,14 +48,12 @@ class Gateway:
                         self.reserved -= reservation
                         self.spent += reservation
                         self.usage.append({"provider": name, "model": request.model, "cost": reservation})
+                    committed = True
                     return Response(text, name, reservation)
                 except Exception:
                     errors.append(name)
             raise RuntimeError("all_providers_failed: " + ", ".join(errors))
         finally:
-            with self._lock:
-                if reservation > 0 and self.reserved >= reservation and not any(
-                    entry["model"] == request.model and entry["cost"] == reservation
-                    for entry in self.usage
-                ):
+            if not committed:
+                with self._lock:
                     self.reserved -= reservation
