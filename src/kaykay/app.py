@@ -16,7 +16,7 @@ def health(): return {"ok":True,"providers":len(gateway.providers)}
 def keys(): return {"api_key":issue_key()}
 @app.post("/v1/chat/completions")
 def chat(body:Chat,x_api_key:str=Header(default="")):
-    if x_api_key and not _KEYS.get(_hash(x_api_key)): raise HTTPException(401,"invalid api key")
+    if not x_api_key or not _KEYS.get(_hash(x_api_key)): raise HTTPException(401,"invalid api key")
     try: r=gateway.complete(Request(x_api_key,body.model,body.prompt,body.max_tokens))
     except RuntimeError as e: raise HTTPException(402 if str(e)=="budget_exceeded" else 502,str(e))
     return {"text":r.text,"provider":r.provider,"estimated_cost":r.estimated_cost}
